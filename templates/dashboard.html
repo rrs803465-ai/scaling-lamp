@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — DxdPanel{% endblock %}
+{% block head %}
+<style>
+.dash { display: grid; grid-template-columns: 260px 1fr; gap: 1.25rem; }
+.sidebar { display: flex; flex-direction: column; gap: .75rem; }
+.vps-item {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .44rem .65rem; border-radius: var(--r);
+  border: 1px solid transparent; font-size: .76rem;
+  color: var(--text-2); transition: all .15s;
+  cursor: pointer; text-decoration: none;
+}
+.vps-item:hover { background: rgba(168,85,247,.06); color: var(--text); border-color: var(--border); }
+.vps-item.active { background: rgba(168,85,247,.1); border-color: rgba(168,85,247,.3); color: var(--text); }
+.vps-item-name { flex: 1; font-family: var(--mono); font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vps-item-st   { font-size: .62rem; color: var(--text-3); }
+
+.main { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: .8rem; }
+
+.tabs { display: flex; border-bottom: 1px solid var(--border); }
+.tab  { display: flex; align-items: center; gap: .3rem; padding: .44rem .85rem; font-size: .75rem; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; user-select: none; }
+.tab:hover { color: var(--text-2); }
+.tab.active { color: var(--purple-hi); border-bottom-color: var(--purple); }
+
+.info-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.info-item  { display: flex; flex-direction: column; gap: .14rem; }
+.info-label { font-size: .6rem; font-family: var(--mono); color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; }
+.info-val   { font-size: .79rem; font-family: var(--mono); color: var(--text); word-break: break-all; }
+
+.action-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+.waiting-card {
+  background: rgba(14,14,26,.7); backdrop-filter: blur(20px);
+  border: 1px solid rgba(168,85,247,.2); border-radius: var(--r-xl);
+  padding: 3rem 2rem; text-align: center;
+  box-shadow: 0 0 60px rgba(168,85,247,.06);
+}
+.waiting-glow {
+  width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 1.5rem;
+  background: radial-gradient(circle, rgba(168,85,247,.25), transparent 70%);
+  border: 1px solid rgba(168,85,247,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  animation: float 3s ease infinite;
+}
+@keyframes float { 0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)} }
+
+.queue-ring { width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(168,85,247,.2); border-top-color: var(--purple); animation: spin .9s linear infinite; margin: 0 auto .9rem; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+@media(max-width:900px){ .dash{grid-template-columns:1fr;} .stats-grid{grid-template-columns:1fr 1fr;} }
+@media(max-width:480px){ .stats-grid{grid-template-columns:1fr;} .info-grid{grid-template-columns:1fr;} }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page">
+<div class="dash">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="glass-flat" style="padding:.85rem;">
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem;">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(34,211,238,.15));border:1px solid rgba(168,85,247,.3);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--purple-hi);">
+        {{ current_user.username[0].upper() }}
+      </div>
+      <div>
+        <div style="font-size:.8rem;font-weight:600;color:var(--text);">{{ current_user.username }}</div>
+        <div style="font-size:.64rem;color:var(--text-3);font-family:var(--mono);">user</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-flat" style="padding:.85rem;">
+    <div style="font-size:.6rem;font-weight:600;font-family:var(--mono);color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.7rem;">Your Servers</div>
+    {% if all_vps %}
+    <div style="display:flex;flex-direction:column;gap:.2rem;">
+      {% for v in all_vps %}
+      <a href="{{ url_for('dashboard', vps_id=v.id) }}"
+         class="vps-item {{ 'active' if vps and vps.id == v.id }}">
+        <span class="dot {{ 'dot-green' if v.status=='running' else 'dot-yellow' if v.status in ('creating','queued') else 'dot-red' if v.status in ('failed','suspended') else 'dot-purple' }}"></span>
+        <span class="vps-item-name">{{ v.container_id[:16] if v.container_id not in ('pending','pending-overflow') else 'provisioning...' }}</span>
+        <span class="vps-item-st">{{ v.status }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="font-size:.75rem;color:var(--text-3);padding:.5rem 0;">No VPS assigned yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="glass-flat" style="padding:.85rem;">
+    <div style="font-size:.6rem;font-weight:600;font-family:var(--mono);color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.6rem;">Account</div>
+    <div style="display:flex;flex-direction:column;gap:.35rem;font-size:.73rem;">
+      <a href="{{ url_for('forgot_password') }}" style="color:var(--text-2);">Change password</a>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+{% if not all_vps %}
+<!-- waiting state -->
+<div class="waiting-card anim-scale-in trace-border">
+  <div class="waiting-glow">&#9670;</div>
+  <div class="neon-title" style="margin-bottom:.6rem;">Waiting for server assignment</div>
+  <p style="color:var(--text-2);font-size:.82rem;max-width:380px;margin:0 auto 1.5rem;line-height:1.65;">
+    Your account is registered. The admin will assign a VPS to your account shortly.
+    Check back here — it will appear automatically when ready.
+  </p>
+  <div style="display:inline-flex;align-items:center;gap:.6rem;padding:.4rem .9rem;border-radius:99px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);font-size:.72rem;color:var(--purple-hi);font-family:var(--mono);">
+    <div class="brand-pulse"></div>
+    Pending admin assignment
+  </div>
+</div>
+
+{% elif vps and vps.status in ('queued','creating') %}
+<div class="glass-flat" style="padding:2rem;text-align:center;">
+  <div class="queue-ring"></div>
+  <div style="font-size:.68rem;font-family:var(--mono);color:var(--purple-hi);margin-bottom:.4rem;">
+    {% if queue_pos > 0 %}position {{ queue_pos }} &mdash; ~{{ queue_pos * slot_seconds }}s{% else %}building now{% endif %}
+  </div>
+  <div class="neon-title" style="margin-bottom:.35rem;">Provisioning your server</div>
+  <p style="color:var(--text-2);font-size:.78rem;margin-bottom:1.1rem;">Installing Ubuntu 22.04, configuring access layer.</p>
+  <div class="progress" style="max-width:280px;margin:0 auto .85rem;height:4px;"><div class="progress-bar" id="buildProg" style="width:4%;"></div></div>
+  <div id="logBox" style="text-align:left;max-height:150px;overflow-y:auto;background:rgba(7,7,16,.8);border:1px solid var(--border);border-radius:var(--r);padding:.55rem .7rem;font-family:var(--mono);font-size:.68rem;color:var(--text-3);margin-top:.65rem;"></div>
+</div>
+<script>
+(function(){
+  const log=document.getElementById('logBox'),bar=document.getElementById('buildProg');
+  let p=4;
+  const es=new EventSource("{{ url_for('vps_logs', vps_id=vps.id) }}");
+  es.onmessage=e=>{
+    if(e.data==='[DONE]'){es.close();poll();return;}
+    const d=document.createElement('div');d.textContent=e.data;log.appendChild(d);log.scrollTop=9999;
+    p=Math.min(p+2,88);bar.style.width=p+'%';
+  };
+  function poll(){fetch("{{ url_for('vps_queue_status', vps_id=vps.id) }}").then(r=>r.json()).then(d=>{if(d.status==='running'){bar.style.width='100%';setTimeout(()=>location.reload(),500);}else if(d.status==='failed')location.reload();else setTimeout(poll,4000);});}
+  setInterval(poll,10000);
+})();
+</script>
+
+{% elif vps and vps.status == 'failed' %}
+<div class="glass-flat" style="padding:1.25rem;">
+  <div class="alert alert-error">Build failed: {{ vps.ssh_command }}</div>
+  <div style="font-size:.78rem;color:var(--text-2);">Contact the admin to have your VPS re-provisioned.</div>
+</div>
+
+{% elif vps %}
+<!-- running / stopped -->
+<div class="stats-grid">
+  <div class="stat-card anim-fade-up trace-border">
+    <div class="stat-icon-box cpu">&#9632;</div>
+    <div class="stat-label">CPU</div>
+    <div class="stat-val" id="cpuVal">—</div>
+    <div class="progress"><div class="progress-bar" id="cpuBar" style="width:0%"></div></div>
+    <div class="stat-sub">usage</div>
+  </div>
+  <div class="stat-card anim-fade-up trace-border">
+    <div class="stat-icon-box mem">&#8760;</div>
+    <div class="stat-label">RAM</div>
+    <div class="stat-val" id="ramVal">—</div>
+    <div class="progress"><div class="progress-bar" id="ramBar" style="width:0%"></div></div>
+    <div class="stat-sub" id="ramSub">memory</div>
+  </div>
+  <div class="stat-card anim-fade-up trace-border">
+    <div class="stat-icon-box disk">&#9679;</div>
+    <div class="stat-label">DISK</div>
+    <div class="stat-val">{{ vps.disk_gb or '—' }}<span style="font-size:.75rem;color:var(--text-3);">GB</span></div>
+    <div class="progress"><div class="progress-bar" style="width:10%"></div></div>
+    <div class="stat-sub">quota</div>
+  </div>
+  <div class="stat-card anim-fade-up trace-border">
+    <div class="stat-icon-box uptime">&#9711;</div>
+    <div class="stat-label">UPTIME</div>
+    <div class="stat-val" id="uptimeVal">—</div>
+    <div class="progress"><div class="progress-bar" style="width:0%"></div></div>
+    <div class="stat-sub">running</div>
+  </div>
+</div>
+
+<div class="glass-flat" style="padding:1.25rem;">
+  <!-- header -->
+  <div class="flex-b" style="margin-bottom:.9rem;flex-wrap:wrap;gap:.6rem;">
+    <div class="flex-c gap-md" style="flex-wrap:wrap;">
+      <div class="flex-c gap-sm">
+        <span class="dot {{ 'dot-green' if vps.status=='running' else 'dot-grey' if vps.status=='stopped' else 'dot-yellow' }}"></span>
+        <span style="font-family:var(--mono);font-size:.82rem;color:var(--text);">{{ vps.container_id }}</span>
+      </div>
+      <span class="badge {{ 'badge-green' if vps.status=='running' else 'badge-grey' if vps.status=='stopped' else 'badge-yellow' }}">{{ vps.status }}</span>
+      {% if vps.kvm_enabled %}<span class="badge badge-purple">KVM</span>{% endif %}
+      {% if vps.node_id and vps.node_id > 0 %}<span class="badge badge-cyan">node-{{ vps.node_id }}</span>{% endif %}
+    </div>
+    <div class="action-row">
+      {% if vps.status == 'running' %}
+      <form method="post" action="{{ url_for('vps_power', vps_id=vps.id, action='stop') }}">
+        <button class="btn btn-ghost btn-sm">&#9632; Stop</button>
+      </form>
+      {% elif vps.status == 'stopped' %}
+      <form method="post" action="{{ url_for('vps_power', vps_id=vps.id, action='start') }}">
+        <button class="btn btn-cyan btn-sm">&#9654; Start</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('vps_power', vps_id=vps.id, action='reinstall') }}"
+            onsubmit="return confirm('Reinstall wipes all data. Continue?')">
+        <button class="btn btn-warn btn-sm">&#8635; Reinstall</button>
+      </form>
+      <a href="{{ url_for('file_manager', vps_id=vps.id) }}" class="btn btn-ghost btn-sm">&#128193; Files</a>
+    </div>
+  </div>
+
+  <div class="info-grid" style="margin-bottom:.9rem;">
+    <div class="info-item"><span class="info-label">Container</span><span class="info-val">{{ vps.container_id }}</span></div>
+    <div class="info-item"><span class="info-label">OS</span><span class="info-val">Ubuntu 22.04 LTS</span></div>
+    <div class="info-item"><span class="info-label">Specs</span><span class="info-val">{{ vps.cpu_cores }}vCPU / {{ vps.ram_gb }}GB / {{ vps.disk_gb }}GB</span></div>
+    <div class="info-item"><span class="info-label">Created</span><span class="info-val">{{ vps.created_at | strftime }}</span></div>
+  </div>
+
+  {% if vps.status == 'running' %}
+  <div class="divider-neon"></div>
+  <div class="tabs">
+    <div class="tab active" id="tab-btn-browser" onclick="switchTab('browser')">&gt;_ Terminal</div>
+    {% if vps.ssh_command and vps.ssh_command != '__terminal_only__' %}
+    <div class="tab" id="tab-btn-sshx" onclick="switchTab('sshx')">&#8617; sshx</div>
+    {% endif %}
+    <div style="margin-left:auto;display:flex;align-items:center;padding:.2rem 0;">
+      <form method="post" action="{{ url_for('regen_ssh', vps_id=vps.id) }}" style="margin:0;">
+        <button class="btn btn-ghost btn-sm">&#8635; Regen</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="tab-browser" class="terminal-wrap">
+    <div class="terminal-titlebar">
+      <span class="tbar-dot" style="background:#ff5f57;"></span>
+      <span class="tbar-dot" style="background:#febc2e;margin-left:4px;"></span>
+      <span class="tbar-dot" style="background:#28c840;margin-left:4px;"></span>
+      <span class="tbar-title">{{ vps.container_id[:24] }}</span>
+    </div>
+    <div id="terminal-output"></div>
+    <div id="terminal-input-row">
+      <span class="t-prompt">&#9670; root@{{ vps.container_id[:14] }}:~#</span>
+      <input id="terminal-cmd" type="text" autocomplete="off" spellcheck="false" placeholder="command">
+    </div>
+  </div>
+
+  {% if vps.ssh_command and vps.ssh_command != '__terminal_only__' %}
+  <div id="tab-sshx" style="display:none;padding:.85rem 0;">
+    <p style="font-size:.76rem;color:var(--text-2);margin-bottom:.65rem;">Full-featured terminal — colour output, session sharing, mobile support.</p>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+      <code style="flex:1;padding:.5rem .65rem;font-size:.72rem;word-break:break-all;display:block;background:rgba(7,7,16,.8);border:1px solid var(--border);border-radius:var(--r);">{{ vps.ssh_command }}</code>
+      <a href="{{ vps.ssh_command }}" target="_blank" rel="noopener" class="btn btn-purple btn-sm">Open</a>
+      <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('{{ vps.ssh_command }}')">Copy</button>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+
+  {% if vps and vps.ssh_command == '__terminal_only__' %}
+  <div style="padding:.65rem 0;">
+    <div class="alert alert-info" style="font-size:.75rem;">
+      sshx could not be established. Use the browser terminal above — it has full command access.
+      Click <strong>Regen</strong> to retry the sshx link.
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
+</main>
+</div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const btn=document.getElementById('tab-btn-'+name); if(btn) btn.classList.add('active');
+  const b=document.getElementById('tab-browser'), s=document.getElementById('tab-sshx');
+  if(b) b.style.display=name==='browser'?'':'none';
+  if(s) s.style.display=name==='sshx'?'':'none';
+}
+
+{% if vps and vps.status == 'running' %}
+(function(){
+  const out=document.getElementById('terminal-output'), inp=document.getElementById('terminal-cmd');
+  if(!out||!inp) return;
+  const hist=[]; let hi=-1;
+  function line(txt,cls){const s=document.createElement('span');s.className='t-line '+(cls||'t-out');s.textContent=txt+'\n';out.appendChild(s);out.scrollTop=out.scrollHeight;}
+  line('connected to {{ vps.container_id }}','t-info');
+  inp.addEventListener('keydown',async e=>{
+    if(e.key==='ArrowUp'){e.preventDefault();if(hi<hist.length-1){hi++;inp.value=hist[hist.length-1-hi];}return;}
+    if(e.key==='ArrowDown'){e.preventDefault();if(hi>0){hi--;inp.value=hist[hist.length-1-hi];}else{hi=-1;inp.value='';}return;}
+    if(e.key!=='Enter') return;
+    const cmd=inp.value.trim(); if(!cmd) return;
+    hist.push(cmd); hi=-1; line('# '+cmd,'t-cmd'); inp.value='';
+    try{
+      const r=await fetch("{{ url_for('terminal_exec', vps_id=vps.id) }}",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd})});
+      const d=await r.json();
+      if(d.error){line('error: '+d.error,'t-err');return;}
+      (d.output||'').split('\n').forEach(l=>line(l,'t-out'));
+      if(d.exit_code!==0) line('[exit '+d.exit_code+']','t-err');
+    }catch(err){line('failed: '+err,'t-err');}
+  });
+  inp.focus();
+})();
+
+(function(){
+  const cpuV=document.getElementById('cpuVal'),cpuB=document.getElementById('cpuBar');
+  const ramV=document.getElementById('ramVal'),ramB=document.getElementById('ramBar');
+  const ramS=document.getElementById('ramSub'),upV=document.getElementById('uptimeVal');
+  if(!cpuV) return;
+  function fmt(s){if(!s)return'—';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>=24?Math.floor(h/24)+'d '+h%24+'h':h+'h '+m+'m';}
+  function bar(el,pct){el.style.width=Math.min(pct,100)+'%';el.className='progress-bar'+(pct>85?' danger':pct>65?' warn':'');}
+  function poll(){
+    fetch("{{ url_for('vps_stats', vps_id=vps.id) }}").then(r=>r.json()).then(d=>{
+      if(d.error)return;
+      cpuV.textContent=d.cpu_percent.toFixed(1)+'%'; bar(cpuB,d.cpu_percent);
+      ramV.textContent=d.mem_usage_mb+'MB'; bar(ramB,d.mem_percent);
+      if(ramS)ramS.textContent='of '+(d.mem_limit_mb/1024).toFixed(1)+'GB';
+      if(upV)upV.textContent=fmt(d.uptime_seconds);
+    }).catch(()=>{});
+  }
+  poll(); setInterval(poll,5000);
+})();
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Register — DxdPanel{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-mark" style="animation:glowPulse 2.5s ease infinite;">D</div>
+      <div class="auth-title">Create an account</div>
+      <div class="auth-sub">Register — a VPS will be assigned by the admin</div>
+    </div>
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+    <form method="post">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input name="username" class="form-input" placeholder="choose_a_username" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input name="password" type="password" class="form-input" placeholder="min 6 characters">
+      </div>
+      <div style="font-size:.71rem;color:var(--text-3);margin-bottom:.9rem;line-height:1.55;">
+        You will not receive a VPS automatically. The admin reviews accounts and assigns servers manually.
+      </div>
+      <button type="submit" class="btn btn-purple btn-full">Register</button>
+    </form>
+    <div style="text-align:center;margin-top:1.1rem;font-size:.76rem;">
+      <a href="{{ url_for('login') }}" style="color:var(--text-2);">Already have an account? Sign in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

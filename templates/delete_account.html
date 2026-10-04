@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Delete Account — DxdPanel{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card" style="text-align:center;">
+    <div style="font-size:2rem;margin-bottom:.75rem;animation:glowPulse 2s ease infinite;display:inline-block;">&#9888;</div>
+    <div class="auth-title" style="margin-bottom:.4rem;">Delete your account</div>
+    <div class="auth-sub" style="margin-bottom:1.25rem;">All your VPS containers will be permanently destroyed. This cannot be undone.</div>
+    {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+    <form method="post" style="text-align:left;">
+      <div class="form-group">
+        <label class="form-label">Enter your recovery code to confirm</label>
+        <input name="code" class="form-input" placeholder="XXXXXX" style="text-transform:uppercase;letter-spacing:.12em;font-family:var(--mono);text-align:center;">
+      </div>
+      <button type="submit" class="btn btn-danger btn-full">Delete my account permanently</button>
+    </form>
+    <div style="margin-top:1rem;font-size:.76rem;">
+      <a href="{{ url_for('dashboard') }}" style="color:var(--text-2);">Cancel</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

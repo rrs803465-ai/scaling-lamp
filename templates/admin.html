@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Admin — DxdPanel{% endblock %}
+{% block head %}
+<style>
+.admin-layout { display:grid; grid-template-columns:220px 1fr; gap:1.25rem; }
+.admin-nav { display:flex; flex-direction:column; gap:.2rem; }
+.admin-nav a {
+  display:flex; align-items:center; gap:.55rem;
+  padding:.48rem .75rem; border-radius:var(--r);
+  font-size:.78rem; color:var(--text-2);
+  border:1px solid transparent;
+  transition:all .18s; text-decoration:none;
+}
+.admin-nav a:hover { background:rgba(168,85,247,.08); color:var(--text); border-color:var(--border); }
+.admin-nav a.active { background:rgba(168,85,247,.12); border-color:rgba(168,85,247,.3); color:var(--purple-hi); }
+.admin-nav .nav-icon { font-size:.85rem; width:16px; text-align:center; flex-shrink:0; }
+.admin-section { display:none; animation:secIn .25s ease; }
+.admin-section.active { display:block; }
+@keyframes secIn { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none} }
+
+.stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; margin-bottom:1.25rem; }
+.mini-stat {
+  background:rgba(14,14,26,.75); backdrop-filter:blur(20px);
+  border:1px solid var(--border); border-radius:var(--r-xl);
+  padding:.9rem 1rem; position:relative; overflow:hidden;
+  transition:all .2s; cursor:default;
+}
+.mini-stat::before { content:''; position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent);opacity:0;transition:opacity .2s; }
+.mini-stat:hover { border-color:var(--border-hi); transform:translateY(-2px); box-shadow:0 0 24px rgba(168,85,247,.12); }
+.mini-stat:hover::before { opacity:1; }
+.mini-stat-val { font-family:var(--mono); font-size:1.5rem; font-weight:700; color:var(--text); line-height:1; }
+.mini-stat-lbl { font-size:.62rem; color:var(--text-3); font-family:var(--mono); text-transform:uppercase; letter-spacing:.08em; margin-top:.3rem; }
+
+/* grant form */
+.grant-card {
+  background:rgba(14,14,26,.75); backdrop-filter:blur(20px);
+  border:1px solid var(--border); border-radius:var(--r-xl); padding:1.5rem;
+}
+.spec-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.85rem; }
+
+/* vps table actions */
+.act-cluster { display:flex; gap:.3rem; flex-wrap:wrap; }
+
+@media(max-width:900px){ .admin-layout{grid-template-columns:1fr;} .admin-nav{flex-direction:row;flex-wrap:wrap;} .stat-row{grid-template-columns:1fr 1fr;} .spec-grid{grid-template-columns:1fr;} }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page">
+<div class="admin-layout">
+
+<nav style="padding-top:.25rem;">
+  <div style="font-size:.6rem;font-weight:700;font-family:var(--mono);color:var(--text-3);text-transform:uppercase;letter-spacing:.12em;padding:.3rem .75rem;margin-bottom:.4rem;">Control</div>
+  <div class="admin-nav">
+    <a href="#" onclick="showSec('overview')" id="nav-overview" class="active"><span class="nav-icon">&#9642;</span> Overview</a>
+    <a href="#" onclick="showSec('vpses')"    id="nav-vpses"><span class="nav-icon">&#9632;</span> VPSes</a>
+    <a href="#" onclick="showSec('users')"    id="nav-users"><span class="nav-icon">&#9675;</span> Users</a>
+    <a href="#" onclick="showSec('grant')"    id="nav-grant"><span class="nav-icon">&#9650;</span> Grant VPS</a>
+    <a href="#" onclick="showSec('broadcast')" id="nav-broadcast"><span class="nav-icon">&#9670;</span> Broadcast</a>
+    <a href="{{ url_for('admin_nodes') }}" style="margin-top:.5rem;color:var(--cyan);border-color:rgba(34,211,238,.15);"><span class="nav-icon">&#9671;</span> Nodes</a>
+  </div>
+  <div style="margin-top:1.25rem;padding:.75rem;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:var(--r-lg);">
+    <div style="font-size:.6rem;color:var(--text-3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">Node code</div>
+    <div style="font-family:var(--mono);font-size:.82rem;color:var(--purple-hi);letter-spacing:.06em;word-break:break-all;">{{ node_code }}</div>
+    <div style="font-size:.62rem;color:var(--text-3);margin-top:.3rem;">{{ node_url or 'URL auto-detecting…' }}</div>
+  </div>
+</nav>
+
+<main>
+
+<!-- Overview -->
+<div class="admin-section active" id="sec-overview">
+  <div style="margin-bottom:1.25rem;" class="flex-b">
+    <span class="neon-title">Overview</span>
+    <span style="font-size:.7rem;color:var(--text-3);font-family:var(--mono);">DxdPanel / Booster</span>
+  </div>
+  <div class="stat-row">
+    <div class="mini-stat anim-fade-up trace-border">
+      <div class="mini-stat-val" style="background:linear-gradient(135deg,var(--purple-hi),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">{{ vpses|length }}</div>
+      <div class="mini-stat-lbl">Total VPSes</div>
+    </div>
+    <div class="mini-stat anim-fade-up trace-border">
+      <div class="mini-stat-val" style="color:var(--green);">{{ vpses|selectattr('status','equalto','running')|list|length }}</div>
+      <div class="mini-stat-lbl">Running</div>
+    </div>
+    <div class="mini-stat anim-fade-up trace-border">
+      <div class="mini-stat-val" style="color:var(--cyan);">{{ users|length }}</div>
+      <div class="mini-stat-lbl">Users</div>
+    </div>
+    <div class="mini-stat anim-fade-up trace-border">
+      <div class="mini-stat-val" style="color:var(--yellow);">{{ queue_length }}</div>
+      <div class="mini-stat-lbl">In queue</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;">
+    <div style="background:rgba(14,14,26,.7);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r-xl);padding:1.1rem;">
+      <div style="font-size:.6rem;font-weight:700;font-family:var(--mono);color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.85rem;">Host resources</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;">
+        <div><div style="font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--text);">{{ host.cpu_cores }}</div><div style="font-size:.65rem;color:var(--text-3);">CPU cores</div></div>
+        <div><div style="font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--text);">{{ (host.ram_mb/1024)|int }}GB</div><div style="font-size:.65rem;color:var(--text-3);">RAM</div></div>
+        <div><div style="font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--text);">{{ host.disk_allocated_gb }}GB</div><div style="font-size:.65rem;color:var(--text-3);">Allocated</div></div>
+        <div><div style="font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--text);">{{ max_vps }}</div><div style="font-size:.65rem;color:var(--text-3);">Max VPS</div></div>
+      </div>
+    </div>
+    <div style="background:rgba(14,14,26,.7);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r-xl);padding:1.1rem;">
+      <div style="font-size:.6rem;font-weight:700;font-family:var(--mono);color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.85rem;">Capacity</div>
+      <div style="margin-bottom:.5rem;">
+        <div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--text-3);font-family:var(--mono);margin-bottom:.3rem;">
+          <span>VPS load</span><span>{{ vpses|length }} / {{ max_vps }}</span>
+        </div>
+        <div class="progress" style="height:5px;">
+          <div class="progress-bar {{ 'danger' if (vpses|length/max_vps)>.85 else 'warn' if (vpses|length/max_vps)>.65 else '' }}"
+               style="width:{{ ((vpses|length/max_vps)*100)|int }}%"></div>
+        </div>
+      </div>
+      {% if broadcast and broadcast.active %}
+      <div style="margin-top:.75rem;padding:.55rem .7rem;background:rgba(250,204,21,.06);border:1px solid rgba(250,204,21,.2);border-radius:var(--r);font-size:.72rem;color:var(--yellow);">
+        Active broadcast: "{{ broadcast.message[:60] }}"
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- VPSes -->
+<div class="admin-section" id="sec-vpses">
+  <div style="margin-bottom:1.1rem;" class="flex-b">
+    <span class="neon-title">All VPSes</span>
+    <span style="font-size:.72rem;color:var(--text-3);">{{ vpses|length }} total</span>
+  </div>
+  <div style="background:rgba(14,14,26,.7);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>User</th><th>Container</th><th>Specs</th><th>Status</th><th>KVM</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for v in vpses %}
+          <tr>
+            <td class="mono" style="color:var(--text);">{{ v.username }}</td>
+            <td class="mono" style="font-size:.7rem;max-width:160px;" class="truncate">{{ v.container_id }}</td>
+            <td style="font-size:.7rem;font-family:var(--mono);color:var(--text-3);">{{ v.cpu_cores }}c / {{ v.ram_gb }}GB / {{ v.disk_gb }}GB</td>
+            <td>
+              <span class="badge {{ 'badge-green' if v.status=='running' else 'badge-red' if v.status in ('failed','suspended') else 'badge-yellow' if v.status in ('creating','queued') else 'badge-grey' }}">
+                {{ v.status }}
+              </span>
+            </td>
+            <td>{% if v.kvm_enabled %}<span class="badge badge-purple">KVM</span>{% else %}<span style="color:var(--text-3);font-size:.7rem;">—</span>{% endif %}</td>
+            <td>
+              <div class="act-cluster">
+                {% if v.status == 'running' %}
+                <form method="post" action="{{ url_for('admin_vps_action', vps_id=v.id, action='suspend') }}">
+                  <button class="btn btn-warn btn-sm">Suspend</button>
+                </form>
+                {% elif v.status == 'suspended' %}
+                <form method="post" action="{{ url_for('admin_vps_action', vps_id=v.id, action='unsuspend') }}">
+                  <button class="btn btn-cyan btn-sm">Unsuspend</button>
+                </form>
+                {% endif %}
+                {% if host_kvm %}
+                {% if v.kvm_enabled %}
+                <form method="post" action="{{ url_for('admin_vps_action', vps_id=v.id, action='disable_kvm') }}">
+                  <button class="btn btn-ghost btn-sm">KVM off</button>
+                </form>
+                {% else %}
+                <form method="post" action="{{ url_for('admin_vps_action', vps_id=v.id, action='enable_kvm') }}">
+                  <button class="btn btn-ghost btn-sm">KVM on</button>
+                </form>
+                {% endif %}
+                {% endif %}
+                <form method="post" action="{{ url_for('admin_vps_action', vps_id=v.id, action='delete') }}"
+                      onsubmit="return confirm('Delete {{ v.container_id }}?')">
+                  <button class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Users -->
+<div class="admin-section" id="sec-users">
+  <div style="margin-bottom:1.1rem;" class="flex-b">
+    <span class="neon-title">Users</span>
+    <span style="font-size:.72rem;color:var(--text-3);">{{ users|length }} registered</span>
+  </div>
+  <div style="background:rgba(14,14,26,.7);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;">
+    <table>
+      <thead><tr><th>ID</th><th>Username</th><th>Signup IP</th><th>Role</th><th>Joined</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="mono" style="color:var(--text-3);">{{ u.id }}</td>
+          <td class="mono" style="color:var(--text);">{{ u.username }}</td>
+          <td class="mono" style="font-size:.72rem;">{{ u.signup_ip }}</td>
+          <td>{% if u.is_admin %}<span class="badge badge-purple">admin</span>{% else %}<span class="badge badge-grey">user</span>{% endif %}</td>
+          <td class="mono" style="font-size:.68rem;color:var(--text-3);">{{ u.created_at | strftime }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Grant VPS -->
+<div class="admin-section" id="sec-grant">
+  <div style="margin-bottom:1.1rem;"><span class="neon-title">Grant VPS</span></div>
+  <div class="grant-card anim-fade-up" style="max-width:560px;">
+    <form method="post" action="{{ url_for('admin_grant_vps') }}">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input name="username" class="form-input" placeholder="target username">
+      </div>
+      <div class="spec-grid">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">&#9632; CPU cores</label>
+          <input name="cpu_cores" type="number" class="form-input" min="1" max="32" value="4">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">&#8760; RAM (GB)</label>
+          <input name="ram_gb" type="number" class="form-input" min="1" max="160" value="4">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">&#9679; Disk (GB)</label>
+          <input name="disk_gb" type="number" class="form-input" min="5" max="2000" value="80">
+        </div>
+      </div>
+      {% if host_kvm %}
+      <div class="form-group" style="margin-top:.75rem;">
+        <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.82rem;color:var(--text-2);">
+          <input type="checkbox" name="kvm_enabled" value="1" style="accent-color:var(--purple);">
+          Enable KVM <span class="badge badge-purple" style="font-size:.6rem;">host supports</span>
+        </label>
+        <div class="form-hint">Grants /dev/kvm — nested VMs, Android emulators.</div>
+      </div>
+      {% else %}
+      <div class="alert alert-warn" style="margin:.75rem 0;font-size:.76rem;">KVM not available on this host (/dev/kvm missing).</div>
+      {% endif %}
+      <button type="submit" class="btn btn-purple" style="margin-top:.5rem;">
+        &#9650; Provision VPS
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Broadcast -->
+<div class="admin-section" id="sec-broadcast">
+  <div style="margin-bottom:1.1rem;"><span class="neon-title">Broadcast</span></div>
+  <div class="grant-card anim-fade-up" style="max-width:520px;">
+    {% if broadcast and broadcast.active %}
+    <div class="alert alert-warn" style="margin-bottom:1rem;">Active: "{{ broadcast.message }}"</div>
+    <form method="post" action="{{ url_for('admin_broadcast_clear') }}" style="margin-bottom:1.25rem;">
+      <button class="btn btn-ghost btn-sm">Clear</button>
+    </form>
+    <div style="border-top:1px solid var(--border);margin-bottom:1.25rem;"></div>
+    {% endif %}
+    <form method="post" action="{{ url_for('admin_broadcast_set') }}">
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <input name="message" class="form-input" placeholder="Scheduled maintenance at 03:00 UTC…" maxlength="500">
+      </div>
+      <button type="submit" class="btn btn-purple">Post broadcast</button>
+    </form>
+  </div>
+</div>
+
+</main>
+</div>
+</div>
+
+<script>
+function showSec(name) {
+  document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.admin-nav a').forEach(a=>a.classList.remove('active'));
+  const sec=document.getElementById('sec-'+name);
+  const nav=document.getElementById('nav-'+name);
+  if(sec) sec.classList.add('active');
+  if(nav) nav.classList.add('active');
+  event.preventDefault();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Files — {{ vps.container_id[:16] }}{% endblock %}
+{% block body %}
+<div class="page">
+  <div class="flex-b" style="margin-bottom:1.1rem;flex-wrap:wrap;gap:.75rem;">
+    <div class="flex-c gap-md">
+      <a href="{{ url_for('dashboard', vps_id=vps.id) }}" class="btn btn-ghost btn-sm">&#8592; Back</a>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;color:var(--text);">File Manager</div>
+        <div style="font-family:var(--mono);font-size:.68rem;color:var(--text-3);">{{ vps.container_id }}</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.76rem;flex-wrap:wrap;">
+      {% set parts = path.split('/') %}{% set acc = '' %}
+      {% for part in parts %}{% if part %}{% set acc = acc + '/' + part %}
+      <span style="color:var(--text-3);">/</span><a href="{{ url_for('file_manager', vps_id=vps.id, path=acc) }}" style="color:var(--purple-hi);">{{ part }}</a>
+      {% else %}<a href="{{ url_for('file_manager', vps_id=vps.id, path='/') }}" style="color:var(--purple-hi);">root</a>{% endif %}{% endfor %}
+    </div>
+  </div>
+
+  <div style="background:rgba(14,14,26,.75);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;">
+    <!-- toolbar -->
+    <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;padding:.75rem 1rem;border-bottom:1px solid var(--border);background:rgba(168,85,247,.03);">
+      <form method="post" action="{{ url_for('file_upload', vps_id=vps.id) }}" enctype="multipart/form-data">
+        <input type="hidden" name="path" value="{{ path }}">
+        <input type="file" name="file" id="fi" style="display:none;" onchange="this.form.submit()">
+        <button type="button" class="btn btn-purple btn-sm" onclick="document.getElementById('fi').click()">&#8593; Upload</button>
+      </form>
+      <form method="post" action="{{ url_for('file_mkdir', vps_id=vps.id) }}" style="display:flex;gap:.45rem;align-items:center;">
+        <input type="hidden" name="base" value="{{ path }}">
+        <input name="name" class="form-input" placeholder="New folder" style="height:30px;padding:.22rem .55rem;font-size:.76rem;width:140px;">
+        <button type="submit" class="btn btn-ghost btn-sm">+ Folder</button>
+      </form>
+      {% if path != '/' %}
+      {% set parent = path.rsplit('/',1)[0] or '/' %}
+      <a href="{{ url_for('file_manager', vps_id=vps.id, path=parent) }}" class="btn btn-ghost btn-sm">&#8593; Up</a>
+      {% endif %}
+    </div>
+    {% if entries %}
+    {% for e in entries | sort(attribute='type') | sort(attribute='name') %}
+    <div style="display:flex;align-items:center;gap:.7rem;padding:.46rem 1rem;border-bottom:1px solid var(--border);transition:background .1s;" onmouseover="this.style.background='rgba(168,85,247,.04)'" onmouseout="this.style.background=''">
+      <span style="width:20px;text-align:center;font-size:.82rem;color:var(--text-3);">{{ '/' if e.type=='dir' else '~' if e.type=='link' else '-' }}</span>
+      <span style="flex:1;font-family:var(--mono);font-size:.79rem;color:var(--text);">
+        {% if e.type == 'dir' %}
+        <a href="{{ url_for('file_manager', vps_id=vps.id, path=path.rstrip('/')+'/'+e.name) }}" style="color:var(--cyan);">{{ e.name }}/</a>
+        {% else %}{{ e.name }}{% endif %}
+      </span>
+      <span style="font-family:var(--mono);font-size:.65rem;color:var(--text-3);min-width:55px;text-align:right;">
+        {% if e.size %}{% if e.size>1048576 %}{{ (e.size/1048576)|round(1) }}MB{% elif e.size>1024 %}{{ (e.size/1024)|round(1) }}KB{% else %}{{ e.size }}B{% endif %}{% endif %}
+      </span>
+      <div style="display:flex;gap:.3rem;">
+        {% if e.type != 'dir' %}
+        <a href="{{ url_for('file_download', vps_id=vps.id, path=path.rstrip('/')+'/'+e.name) }}" class="btn btn-ghost btn-sm">&#8595;</a>
+        {% endif %}
+        <form method="post" action="{{ url_for('file_delete', vps_id=vps.id) }}" onsubmit="return confirm('Delete {{ e.name }}?')">
+          <input type="hidden" name="path" value="{{ path.rstrip('/')+'/'+e.name }}">
+          <input type="hidden" name="back" value="{{ path }}">
+          <button class="btn btn-danger btn-sm">&#215;</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:2.5rem;color:var(--text-3);font-size:.82rem;">Empty directory.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

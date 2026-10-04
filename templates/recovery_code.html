@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Recovery Code — DxdPanel{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card" style="text-align:center;">
+    <div style="font-size:2rem;margin-bottom:.75rem;">&#128273;</div>
+    <div class="auth-title" style="margin-bottom:.4rem;">Save your recovery code</div>
+    <div class="auth-sub" style="margin-bottom:1.25rem;">Shown once. Required to reset your password.</div>
+    <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:var(--r-lg);padding:1.25rem;margin-bottom:1.25rem;">
+      <div style="font-family:var(--mono);font-size:1.7rem;font-weight:700;letter-spacing:.2em;color:var(--purple-hi);text-shadow:0 0 20px rgba(168,85,247,.4);">{{ code }}</div>
+    </div>
+    <div class="alert alert-warn" style="text-align:left;">Write this down. It cannot be recovered if lost.</div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-purple btn-full">I've saved it</a>
+  </div>
+</div>
+{% endblock %}

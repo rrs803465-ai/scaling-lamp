@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}DxdPanel — Booster Panel{% endblock %}
+{% block head %}
+<style>
+.hero {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 5rem 2rem; text-align: center;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .28rem .9rem; border-radius: 99px;
+  border: 1px solid rgba(168,85,247,.3);
+  background: rgba(168,85,247,.08);
+  font-family: var(--mono); font-size: .7rem; color: var(--purple-hi);
+  margin-bottom: 2rem; letter-spacing: .06em;
+}
+.hero h1 {
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  font-weight: 800; line-height: 1.05;
+  letter-spacing: -.03em; margin-bottom: 1.25rem;
+}
+.h1-line1 { display: block; color: var(--text); }
+.h1-line2 {
+  display: block;
+  background: linear-gradient(135deg, var(--purple-hi) 0%, var(--cyan) 50%, var(--pink) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub { font-size: 1rem; color: var(--text-2); max-width: 500px; margin: 0 auto 2.5rem; line-height: 1.7; }
+.hero-cta { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+.btn-hero {
+  padding: .7rem 2rem; font-size: .92rem; font-weight: 600;
+  border-radius: var(--r-lg); border: 1px solid transparent;
+  cursor: pointer; transition: all .18s; text-decoration: none;
+  display: inline-flex; align-items: center; gap: .45rem;
+}
+.btn-hero-primary {
+  background: linear-gradient(135deg, var(--purple-d), var(--purple));
+  color: #fff; border-color: rgba(168,85,247,.5);
+  box-shadow: 0 0 30px rgba(168,85,247,.25);
+}
+.btn-hero-primary:hover { box-shadow: 0 0 50px rgba(168,85,247,.4); color: #fff; transform: translateY(-1px); }
+.btn-hero-ghost {
+  background: rgba(255,255,255,.04); color: var(--text-2);
+  border-color: var(--border);
+}
+.btn-hero-ghost:hover { background: rgba(168,85,247,.08); color: var(--text); border-color: var(--border-hi); }
+
+/* feature cards */
+.feat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-radius: var(--r-xl); overflow: hidden; margin: 5rem auto 0; max-width: 900px; }
+.feat-card {
+  background: rgba(14,14,26,.8); padding: 1.75rem 1.5rem;
+  transition: background .2s;
+}
+.feat-card:hover { background: rgba(20,20,40,.9); }
+.feat-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; margin-bottom: .9rem;
+  background: rgba(168,85,247,.1); border: 1px solid rgba(168,85,247,.2);
+}
+.feat-card h3 { font-size: .88rem; font-weight: 600; color: var(--text); margin-bottom: .35rem; }
+.feat-card p  { font-size: .77rem; color: var(--text-2); line-height: 1.6; }
+
+/* landing nav */
+.landing-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+  height: 54px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem;
+  background: rgba(7,7,16,.82); backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+}
+.landing-nav::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--purple), var(--cyan), transparent);
+  opacity: .4;
+}
+.l-brand {
+  font-family: var(--mono); font-weight: 700; font-size: .9rem;
+  background: linear-gradient(135deg, var(--purple-hi), var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.l-nav { display: flex; gap: .5rem; align-items: center; }
+.l-nav a { font-size: .78rem; color: var(--text-2); padding: .3rem .65rem; border-radius: var(--r); transition: all .15s; }
+.l-nav a:hover { color: var(--text); background: rgba(168,85,247,.08); }
+.l-nav .l-cta {
+  background: linear-gradient(135deg, var(--purple-d), var(--purple));
+  color: #fff !important; font-weight: 600; padding: .3rem .85rem !important;
+  border-radius: var(--r); box-shadow: 0 0 16px rgba(168,85,247,.2);
+}
+.l-nav .l-cta:hover { box-shadow: 0 0 26px rgba(168,85,247,.35); background: rgba(0,0,0,0) !important; background: linear-gradient(135deg, var(--purple), var(--purple-hi)) !important; }
+
+/* stats strip */
+.stats-strip {
+  display: flex; gap: 0; margin-top: 3.5rem;
+  border: 1px solid var(--border); border-radius: var(--r-xl);
+  overflow: hidden; background: rgba(14,14,26,.7);
+  backdrop-filter: blur(20px); max-width: 700px; margin-left: auto; margin-right: auto;
+}
+.strip-item {
+  flex: 1; padding: 1.1rem 1.25rem; text-align: center;
+  border-right: 1px solid var(--border);
+  transition: background .2s;
+}
+.strip-item:last-child { border-right: none; }
+.strip-item:hover { background: rgba(168,85,247,.05); }
+.strip-num { font-family: var(--mono); font-size: 1.3rem; font-weight: 700; color: var(--purple-hi); }
+.strip-lbl { font-size: .66rem; color: var(--text-3); margin-top: .15rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+
+@media(max-width:768px){ .feat-grid{grid-template-columns:1fr;} .stats-strip{flex-direction:column;} .strip-item{border-right:none;border-bottom:1px solid var(--border);} .strip-item:last-child{border-bottom:none;} }
+</style>
+{% endblock %}
+{% block body %}
+<nav class="landing-nav">
+  <div class="l-brand">DxdPanel</div>
+  <div class="l-nav">
+    <a href="{{ url_for('login') }}">Sign in</a>
+    <a href="{{ url_for('register') }}" class="l-cta">Register</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">
+    <div class="brand-pulse"></div>
+    Booster Panel &mdash; Admin-Provisioned VPS
+  </div>
+  <h1>
+    <span class="h1-line1">Your server,</span>
+    <span class="h1-line2 shimmer-text">delivered.</span>
+  </h1>
+  <p class="hero-sub">
+    Register your account and receive a fully provisioned Ubuntu 22.04 container
+    with terminal access, file manager, and SSH — granted directly by the admin.
+  </p>
+  <div class="hero-cta">
+    <a href="{{ url_for('register') }}" class="btn-hero btn-hero-primary">Create account</a>
+    <a href="{{ url_for('login') }}" class="btn-hero btn-hero-ghost">Sign in</a>
+  </div>
+  <div class="stats-strip">
+    <div class="strip-item" style="transition:all .2s;" onmouseover="this.style.boxShadow='0 0 24px rgba(168,85,247,.2)'" onmouseout="this.style.boxShadow=''"><div class="strip-num">Ubuntu</div><div class="strip-lbl">22.04 LTS</div></div>
+    <div class="strip-item" style="transition:all .2s;" onmouseover="this.style.boxShadow='0 0 24px rgba(168,85,247,.2)'" onmouseout="this.style.boxShadow=''"><div class="strip-num">LXC</div><div class="strip-lbl">Container</div></div>
+    <div class="strip-item" style="transition:all .2s;" onmouseover="this.style.boxShadow='0 0 24px rgba(168,85,247,.2)'" onmouseout="this.style.boxShadow=''"><div class="strip-num">KVM</div><div class="strip-lbl">Optional</div></div>
+    <div class="strip-item" style="transition:all .2s;" onmouseover="this.style.boxShadow='0 0 24px rgba(168,85,247,.2)'" onmouseout="this.style.boxShadow=''"><div class="strip-num">SSH</div><div class="strip-lbl">+ Browser</div></div>
+  </div>
+</section>
+
+<section style="max-width:1000px;margin:0 auto;padding:0 2rem 6rem;">
+  <div class="feat-grid">
+    <div class="feat-card trace-border anim-fade-up">
+      <div class="feat-icon">&#9616;</div>
+      <h3>Admin provisioned</h3>
+      <p>VPSes are granted by the admin. No self-service, no abuse. Full control over who gets resources.</p>
+    </div>
+    <div class="feat-card trace-border anim-fade-up">
+      <div class="feat-icon">&gt;_</div>
+      <h3>Browser terminal</h3>
+      <p>Full bash shell right in the browser. Also works with sshx for mobile and session sharing.</p>
+    </div>
+    <div class="feat-card trace-border anim-fade-up">
+      <div class="feat-icon">&#128193;</div>
+      <h3>File manager</h3>
+      <p>Upload, download, create folders and delete files inside your container from the panel.</p>
+    </div>
+    <div class="feat-card trace-border anim-fade-up">
+      <div class="feat-icon">&#9680;</div>
+      <h3>Live stats</h3>
+      <p>Real-time CPU, RAM and uptime updated every 5 seconds. Know exactly what your server is doing.</p>
+    </div>
+    <div class="feat-card trace-border anim-fade-up">
+      <div class="feat-icon">&#9670;</div>
+      <h3>KVM support</h3>
+      <p>Admins can grant /dev/kvm access so users can run nested VMs, Android emulators and more.</p>
+    </div>
+    <div class="feat-card trace-border anim-fade-up">
+      <div class="feat-icon">&#8734;</div>
+      <h3>Multi-node</h3>
+      <p>Link additional nodes and overflow VPS creation automatically when one node fills up.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
